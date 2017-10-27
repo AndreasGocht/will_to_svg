@@ -1,8 +1,8 @@
 # will_to_svg
 
-This is a small tool which convertes Wacom Will files from the Bamboo spart to SVG files.
+This is a small tool, which convertes Wacom .will files from the Bamboo Spark to .svg files.
 
-Thanks tho wacom, who mad the essential part of the .will format public available (found it by google :-) ):
+Thanks tho wacom, who made the essential part of the .will format public available (found it by google :-) ):
 
 https://developer-docs.wacom.com/display/DevDoc/WILL+SDK+for+ink+-+File+Format
 
@@ -34,3 +34,5 @@ will_to_svg -i input_filename [-o output_filename]
 
 * `-i` input filename of the .will file
 * `-o` output filename. If blank the outputname will be the inputfilename with .svg appended.  
+
+
