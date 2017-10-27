@@ -4,6 +4,7 @@
 ********************************************************************************
 
 Copyright (c) 2010, Mark Turney
+Copyright (c) 2017, Andreas Gocht
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
@@ -88,6 +89,12 @@ public:
     {
         return !valid;
     }
+    optional &operator=(optional other)
+    {
+        valid = other.valid;
+        type = other.type;
+        return *this;
+    }
 
 private:
     bool valid;
@@ -96,20 +103,41 @@ private:
 
 struct Dimensions
 {
+    Dimensions() : width(0), height(0)
+    {
+    }
+
     Dimensions(double width, double height) : width(width), height(height)
     {
     }
-    Dimensions(double combined = 0) : width(combined), height(combined)
+    Dimensions(double combined) : width(combined), height(combined)
     {
     }
+
+    Dimensions &operator=(Dimensions other)
+    {
+        width = other.width;
+        height = other.height;
+        return *this;
+    }
+
     double width;
     double height;
 };
 
 struct Point
 {
-    Point(double x = 0, double y = 0) : x(x), y(y)
+    Point() : x(0), y(0)
     {
+    }
+    Point(double x, double y) : x(x), y(y)
+    {
+    }
+    Point &operator=(Point other)
+    {
+        x = other.x;
+        y = other.y;
+        return *this;
     }
     double x;
     double y;
@@ -156,12 +184,24 @@ struct Layout
         BottomRight
     };
 
-    Layout(Dimensions const &dimensions = Dimensions(400, 300),
-        Origin origin = BottomLeft,
-        double scale = 1,
-        Point const &origin_offset = Point(0, 0))
+    Layout() : scale(1), origin(TopLeft)
+    {
+    }
+    Layout(Dimensions const &dimensions, Origin origin) : dimensions(dimensions), scale(1), origin(origin)
+    {
+    }
+    Layout(Dimensions const &dimensions, Origin origin, double scale, Point const &origin_offset)
         : dimensions(dimensions), scale(scale), origin(origin), origin_offset(origin_offset)
     {
+    }
+
+    Layout &operator=(Layout other)
+    {
+        dimensions = other.dimensions;
+        scale = other.scale;
+        origin = other.origin;
+        origin_offset = other.origin_offset;
+        return *this;
     }
     Dimensions dimensions;
     double scale;
@@ -223,6 +263,9 @@ public:
         Yellow
     };
 
+    Color() : transparent(false), red(0), green(0), blue(0)
+    {
+    }
     Color(int r, int g, int b) : transparent(false), red(r), green(g), blue(b)
     {
     }
@@ -293,6 +336,15 @@ public:
         return ss.str();
     }
 
+    Color &operator=(Color other)
+    {
+        transparent = other.transparent;
+        red = other.red;
+        green = other.green;
+        blue = other.blue;
+        return *this;
+    }
+
 private:
     bool transparent;
     int red;
@@ -310,10 +362,11 @@ private:
 class Fill : public Serializeable
 {
 public:
+    Fill() = default;
     Fill(Color::Defaults color) : color(color)
     {
     }
-    Fill(Color color = Color::Transparent) : color(color)
+    Fill(Color color) : color(color)
     {
     }
     std::string toString(Layout const &layout) const
@@ -323,6 +376,12 @@ public:
         return ss.str();
     }
 
+    Fill &operator=(Fill other)
+    {
+        color = other.color;
+        return *this;
+    }
+
 private:
     Color color;
 };
@@ -330,7 +389,10 @@ private:
 class Stroke : public Serializeable
 {
 public:
-    Stroke(double width = -1, Color color = Color::Transparent) : width(width), color(color)
+    Stroke() : width(-1)
+    {
+    }
+    Stroke(double width, Color color = Color::Transparent) : width(width), color(color)
     {
     }
     std::string toString(Layout const &layout) const
@@ -344,6 +406,13 @@ public:
         return ss.str();
     }
 
+    Stroke &operator=(Stroke other)
+    {
+        color = other.color;
+        width = other.width;
+        return *this;
+    }
+
 private:
     double width;
     Color color;
@@ -352,7 +421,10 @@ private:
 class Font : public Serializeable
 {
 public:
-    Font(double size = 12, std::string const &family = "Verdana") : size(size), family(family)
+    Font() : size(12), family("Verdana")
+    {
+    }
+    Font(double size, std::string const &family) : size(size), family(family)
     {
     }
     std::string toString(Layout const &layout) const
@@ -360,6 +432,13 @@ public:
         std::stringstream ss;
         ss << attribute("font-size", translateScale(size, layout)) << attribute("font-family", family);
         return ss.str();
+    }
+
+    Font &operator=(Font other)
+    {
+        size = other.size;
+        family = other.family;
+        return *this;
     }
 
 private:
@@ -370,7 +449,8 @@ private:
 class Shape : public Serializeable
 {
 public:
-    Shape(Fill const &fill = Fill(), Stroke const &stroke = Stroke()) : fill(fill), stroke(stroke)
+    Shape() = default;
+    Shape(Fill const &fill, Stroke const &stroke) : fill(fill), stroke(stroke)
     {
     }
     virtual ~Shape()
@@ -395,7 +475,10 @@ template <typename T> std::string vectorToString(std::vector<T> collection, Layo
 class Circle : public Shape
 {
 public:
-    Circle(Point const &center, double diameter, Fill const &fill, Stroke const &stroke = Stroke())
+    Circle() : Shape(), radius(0)
+    {
+    }
+    Circle(Point const &center, double diameter, Fill const &fill, Stroke const &stroke)
         : Shape(fill, stroke), center(center), radius(diameter / 2)
     {
     }
@@ -413,6 +496,15 @@ public:
         center.y += offset.y;
     }
 
+    Circle &operator=(Circle other)
+    {
+        center = other.center;
+        radius = other.radius;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
+
 private:
     Point center;
     double radius;
@@ -421,7 +513,10 @@ private:
 class Elipse : public Shape
 {
 public:
-    Elipse(Point const &center, double width, double height, Fill const &fill = Fill(), Stroke const &stroke = Stroke())
+    Elipse() : radius_width(1), radius_height(1)
+    {
+    }
+    Elipse(Point const &center, double width, double height, Fill const &fill, Stroke const &stroke)
         : Shape(fill, stroke), center(center), radius_width(width / 2), radius_height(height / 2)
     {
     }
@@ -440,6 +535,16 @@ public:
         center.y += offset.y;
     }
 
+    Elipse &operator=(Elipse other)
+    {
+        center = other.center;
+        radius_width = other.radius_width;
+        radius_height = other.radius_height;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
+
 private:
     Point center;
     double radius_width;
@@ -449,8 +554,10 @@ private:
 class Rectangle : public Shape
 {
 public:
-    Rectangle(
-        Point const &edge, double width, double height, Fill const &fill = Fill(), Stroke const &stroke = Stroke())
+    Rectangle() : width(1), height(1)
+    {
+    }
+    Rectangle(Point const &edge, double width, double height, Fill const &fill, Stroke const &stroke)
         : Shape(fill, stroke), edge(edge), width(width), height(height)
     {
     }
@@ -469,6 +576,16 @@ public:
         edge.y += offset.y;
     }
 
+    Rectangle &operator=(Rectangle other)
+    {
+        edge = other.edge;
+        width = other.width;
+        height = other.height;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
+
 private:
     Point edge;
     double width;
@@ -478,7 +595,8 @@ private:
 class Line : public Shape
 {
 public:
-    Line(Point const &start_point, Point const &end_point, Stroke const &stroke = Stroke())
+    Line() = default;
+    Line(Point const &start_point, Point const &end_point, Stroke const &stroke)
         : Shape(Fill(), stroke), start_point(start_point), end_point(end_point)
     {
     }
@@ -499,6 +617,15 @@ public:
         end_point.y += offset.y;
     }
 
+    Line &operator=(Line other)
+    {
+        start_point = other.start_point;
+        end_point = other.end_point;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
+
 private:
     Point start_point;
     Point end_point;
@@ -507,10 +634,11 @@ private:
 class Polygon : public Shape
 {
 public:
-    Polygon(Fill const &fill = Fill(), Stroke const &stroke = Stroke()) : Shape(fill, stroke)
+    Polygon() = default;
+    Polygon(Fill const &fill, Stroke const &stroke) : Shape(fill, stroke)
     {
     }
-    Polygon(Stroke const &stroke = Stroke()) : Shape(Color::Transparent, stroke)
+    Polygon(Stroke const &stroke) : Shape(Color::Transparent, stroke)
     {
     }
     Polygon &operator<<(Point const &point)
@@ -540,6 +668,14 @@ public:
         }
     }
 
+    Polygon &operator=(Polygon other)
+    {
+        points = other.points;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
+
 private:
     std::vector<Point> points;
 };
@@ -547,10 +683,11 @@ private:
 class Polyline : public Shape
 {
 public:
-    Polyline(Fill const &fill = Fill(), Stroke const &stroke = Stroke()) : Shape(fill, stroke)
+    Polyline() = default;
+    Polyline(Fill const &fill, Stroke const &stroke) : Shape(fill, stroke)
     {
     }
-    Polyline(Stroke const &stroke = Stroke()) : Shape(Color::Transparent, stroke)
+    Polyline(Stroke const &stroke) : Shape(Color::Transparent, stroke)
     {
     }
     Polyline(std::vector<Point> const &points, Fill const &fill = Fill(), Stroke const &stroke = Stroke())
@@ -584,16 +721,21 @@ public:
         }
     }
     std::vector<Point> points;
+
+    Polyline &operator=(Polyline other)
+    {
+        points = other.points;
+        fill = other.fill;
+        stroke = other.stroke;
+        return *this;
+    }
 };
 
 class Text : public Shape
 {
 public:
-    Text(Point const &origin,
-        std::string const &content,
-        Fill const &fill = Fill(),
-        Font const &font = Font(),
-        Stroke const &stroke = Stroke())
+    Text() = default;
+    Text(Point const &origin, std::string const &content, Fill const &fill, Font const &font, Stroke const &stroke)
         : Shape(fill, stroke), origin(origin), content(content), font(font)
     {
     }
@@ -611,6 +753,14 @@ public:
         origin.y += offset.y;
     }
 
+    Text &operator=(Text other)
+    {
+        origin = other.origin;
+        content = other.content;
+        font = other.font;
+        return *this;
+    }
+
 private:
     Point origin;
     std::string content;
@@ -621,7 +771,10 @@ private:
 class LineChart : public Shape
 {
 public:
-    LineChart(Dimensions margin = Dimensions(), double scale = 1, Stroke const &axis_stroke = Stroke(.5, Color::Purple))
+    LineChart() : scale(1)
+    {
+    }
+    LineChart(Dimensions margin, double scale, Stroke const &axis_stroke)
         : axis_stroke(axis_stroke), margin(margin), scale(scale)
     {
     }
@@ -648,6 +801,15 @@ public:
     {
         for (unsigned i = 0; i < polylines.size(); ++i)
             polylines[i].offset(offset);
+    }
+
+    LineChart &operator=(LineChart other)
+    {
+        axis_stroke = other.axis_stroke;
+        margin = other.margin;
+        scale = other.scale;
+        polylines = other.polylines;
+        return *this;
     }
 
 private:
@@ -701,7 +863,8 @@ private:
 
         std::vector<Circle> vertices;
         for (unsigned i = 0; i < shifted_polyline.points.size(); ++i)
-            vertices.push_back(Circle(shifted_polyline.points[i], getDimensions()->height / 30.0, Color::Black));
+            vertices.push_back(
+                Circle(shifted_polyline.points[i], getDimensions()->height / 30.0, Color::Black, Stroke(1)));
 
         return shifted_polyline.toString(layout) + vectorToString(vertices, layout);
     }
@@ -710,7 +873,8 @@ private:
 class Document
 {
 public:
-    Document(std::string const &file_name, Layout layout = Layout()) : file_name(file_name), layout(layout)
+    Document() = default;
+    Document(std::string const &file_name, Layout layout) : file_name(file_name), layout(layout)
     {
     }
 
@@ -739,6 +903,14 @@ public:
         ofs << toString();
         ofs.close();
         return true;
+    }
+
+    Document &operator=(Document other)
+    {
+        file_name = other.file_name;
+        layout = other.layout;
+        body_nodes_str = other.body_nodes_str;
+        return *this;
     }
 
 private:
